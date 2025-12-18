@@ -14,7 +14,7 @@ try:
     SERVER_URL = st.secrets["backend_url"]
 except:
     # Saat di Laptop (Lokal), pakai placeholder atau ganti manual untuk testing
-    SERVER_URL = "https://GANTI-DENGAN-DOMAIN-NGROK-ANDA.ngrok-free.app"
+    SERVER_URL = "xxx"
 
 # CSS Styling
 st.markdown("""
