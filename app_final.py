@@ -77,32 +77,70 @@ if st.session_state.is_processing:
         st.session_state.is_processing = False 
         st.rerun() 
     else:
+        # Placeholder untuk container hasil/error agar rapi
+        result_container = st.empty()
+        
         try:
-            with st.spinner("Sedang Menganalisis... Mohon tunggu."):
+            with st.spinner("Sedang Menganalisis... (Bisa memakan waktu 30-60 detik)"):
+                # Bersihkan URL dari slash di akhir
                 endpoint = f"{SERVER_URL.rstrip('/')}/evaluate"
                 payload = {"question": selected_question, "answer": user_answer}
                 
-                # Timeout 10 menit
+                # Request ke Backend
                 response = requests.post(endpoint, json=payload, timeout=600)
                 
+                # Cek Status Code HTTP
                 if response.status_code == 200:
-                    st.session_state.last_result = response.json()
+                    try:
+                        # Coba parsing JSON
+                        st.session_state.last_result = response.json()
+                        st.session_state.is_processing = False
+                        st.rerun() # Refresh untuk menampilkan hasil
+                    except requests.exceptions.JSONDecodeError:
+                        st.error("❌ Server merespon, tapi format data rusak (Bukan JSON).")
+                        with st.expander("Lihat Respon Mentah Server"):
+                            st.code(response.text)
+                        st.session_state.last_result = None
+                
+                elif response.status_code == 404:
+                    st.error(f"❌ URL Salah (404 Not Found).")
+                    st.warning(f"Sistem mencoba menghubungi: `{endpoint}`. Pastikan URL Ngrok di update.")
+                    st.session_state.last_result = None
+                    
+                elif response.status_code == 500:
+                    st.error("❌ Terjadi Error Internal di Server Python (500).")
+                    with st.expander("Detail Error dari Server"):
+                        st.write(response.text)
+                    st.session_state.last_result = None
+                
                 else:
-                    st.error(f"Server Error: {response.text}")
+                    st.error(f"❌ Server menolak dengan status: {response.status_code}")
+                    st.write(response.text)
                     st.session_state.last_result = None
 
         except requests.exceptions.ConnectionError:
-            st.error("Gagal koneksi ke Server Backend. Pastikan PC Kampus menyala.")
+            st.error("🚫 Gagal Terhubung ke Server!")
+            st.warning("""
+            **Kemungkinan Penyebab:**
+            1. Server Python (Backend) belum dinyalakan.
+            2. Ngrok belum dijalankan.
+            3. URL Ngrok di `app.py` atau `secrets.toml` sudah kadaluarsa (ganti dengan yang baru).
+            """)
             st.session_state.last_result = None
+
         except requests.exceptions.Timeout:
-            st.error("Waktu habis. Server terlalu sibuk.")
+            st.error("⏳ Waktu Habis (Timeout)!")
+            st.warning("Server terlalu sibuk atau antrian penuh. Silakan coba tekan tombol Evaluasi lagi dalam 1 menit.")
             st.session_state.last_result = None
+
         except Exception as e:
-            st.error(f"Error: {e}")
+            st.error("❌ Terjadi Kesalahan Tak Terduga")
+            with st.expander("Lihat Detail Teknis"):
+                st.code(f"Error Type: {type(e).__name__}\nError Message: {str(e)}")
             st.session_state.last_result = None
         
+        # Reset state processing agar tombol bisa ditekan lagi
         st.session_state.is_processing = False
-        st.rerun()
 
 # --- TAMPILKAN HASIL ---
 if st.session_state.last_result:
