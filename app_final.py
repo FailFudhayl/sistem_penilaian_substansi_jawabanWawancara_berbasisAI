@@ -1,19 +1,15 @@
-# ==========================================
-# FILE: app.py (SIAP UPLOAD KE GITHUB)
-# ==========================================
+
 import streamlit as st
 import requests
 
 st.set_page_config(page_title="AI Interview Assessor", layout="wide")
 
-# -----------------------------------------------------------
-# KONFIGURASI URL (MENGGUNAKAN SECRETS)
-# -----------------------------------------------------------
+
 try:
-    # Saat di Streamlit Cloud, dia akan ambil dari Secrets
+    #  ketika di Streamlit Cloud, akan ambil dari Secrets
     SERVER_URL = st.secrets["backend_url"]
 except:
-    # Saat di Laptop (Lokal), pakai placeholder atau ganti manual untuk testing
+    # ketika di Laptop (Lokal)
     SERVER_URL = "secret"
 
 # CSS Styling
@@ -24,7 +20,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- SESSION STATE SETUP ---
+# Session State Setup 
 if 'is_processing' not in st.session_state:
     st.session_state.is_processing = False
 
@@ -48,9 +44,9 @@ DAFTAR_PERTANYAAN = [
     "Bagaimana reaksimu jika ada kesalahan yang terjadi di dalam projectmu (konteks kamu menjadi presiden LSM dan kamu melaksanakan project sosial terkait isu sosial terkini di indonesia) dan kesalahan itu berasal dari rekan kerjamu? apa langkah yang akan kamu lakukan untuk mengatasi masalah tersebut?"
 ]
 
-# --- UI UTAMA ---
+# Halaman utama
 st.title("🤖 AI Interview Assessor")
-# st.caption(f"Backend: {SERVER_URL}") # Bisa di-uncomment untuk debug
+# st.caption(f"Backend: {SERVER_URL}") # untuk debug
 st.markdown("---")
 
 st.subheader("1. Input Data Wawancara")
@@ -62,7 +58,7 @@ with col1:
 with col2:
     user_answer = st.text_area("Jawaban Kandidat:", height=200, placeholder="Jawaban...")
 
-# --- LOGIKA TOMBOL & PROSES ---
+# Button Logic
 st.button(
     "🔍 Evaluasi Jawaban", 
     type="primary", 
@@ -77,25 +73,25 @@ if st.session_state.is_processing:
         st.session_state.is_processing = False 
         st.rerun() 
     else:
-        # Placeholder untuk container hasil/error agar rapi
+        # placeholder untuk container output/error 
         result_container = st.empty()
         
         try:
             with st.spinner("Sedang Menganalisis... (Bisa memakan waktu 30-60 detik)"):
-                # Bersihkan URL dari slash di akhir
+                # membersihkan URL dari slash di akhir
                 endpoint = f"{SERVER_URL.rstrip('/')}/evaluate"
                 payload = {"question": selected_question, "answer": user_answer}
                 
-                # Request ke Backend
+                # Backend Request
                 response = requests.post(endpoint, json=payload, timeout=600)
                 
-                # Cek Status Code HTTP
+                # Status Cek Code HTTP
                 if response.status_code == 200:
                     try:
-                        # Coba parsing JSON
+                        # Parsing JSON
                         st.session_state.last_result = response.json()
                         st.session_state.is_processing = False
-                        st.rerun() # Refresh untuk menampilkan hasil
+                        st.rerun() # Refresh untuk tampilkan hasil
                     except requests.exceptions.JSONDecodeError:
                         st.error("❌ Server merespon, tapi format data rusak (Bukan JSON).")
                         with st.expander("Lihat Respon Mentah Server"):
@@ -142,7 +138,7 @@ if st.session_state.is_processing:
         # Reset state processing agar tombol bisa ditekan lagi
         st.session_state.is_processing = False
 
-# --- TAMPILKAN HASIL ---
+# Halanan Hasil
 if st.session_state.last_result:
     data = st.session_state.last_result
     st.divider()
